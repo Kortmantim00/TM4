@@ -1,0 +1,23 @@
+{% extends 'interface/base.html' %}
+
+{% block title %}Interface Home{% endblock %}
+
+{% block results %}
+    <h2>Results</hs>
+    <p>Here you can see the log of results.</p>
+{% endblock %}
+
+{% block viewer %}
+    <canvas id="viewer" width="800" height="600"></canvas>
+{% endblock %}
+
+{% block controls %}
+    <h2>Controls</h2>
+    <form id="upload-form" enctype="multipart/form-data">
+        <label for="dicom-file">DICOM:</label>
+        <input type="file" id="dicom-file" name=dicom-file"><br><br>
+        <label for="nifti-file">NIFTI:</label>
+        <input type="file" id="nifti-file" name="nifti-file"><br><br>   
+        <button type="button" id="run-algo">Run Algorithm</button>
+    </form>     
+{% endblock %}

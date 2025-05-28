@@ -1,0 +1,28 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}interface{% endblock %}</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- scr[ts fpr VTL.js or Three.js can be added here -->
+
+</head>
+<body>
+   <div class="container">
+        <aside class="sidebar-left">
+            {% block results %}{% endblock %}
+        </aside>
+        <main class="viewer">
+            {% block viewer %}{% endblock %}    
+        </main>
+        <aside class="sidebar-right">
+            {% block sidebar %}{% endblock %}   
+        </aside>
+    </div>  
+    <script src="{% static 'js/interface.js' %}"></script>
+<body>
+</html>
+<!-- This is a base template for the interface, which can be extended by other templates. -->       
