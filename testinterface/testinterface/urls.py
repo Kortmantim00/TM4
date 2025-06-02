@@ -17,8 +17,13 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
-    path('', include('interface.urls')),  # Include the URLs from the interface app
-    path('admin/', admin.site.urls),  # Admin interface URL 
+    path('', include('interface.urls')),
+    path('admin/', admin.site.urls),
 ]
+
+# Voeg deze regel eronder toe om media correct te serven in development:
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

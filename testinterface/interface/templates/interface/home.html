@@ -5,11 +5,17 @@
 {% block sidebar %}
     <h2>Controls</h2>
     <form id="upload-form" enctype="multipart/form-data">
-        <label for="dicom-file">DICOM:</label>
-        <input type="file" id="dicom-file" name="dicom-file"><br><br>
+        <label for="dicom-files">DICOM:</label>
+        <input type="file" id="dicom-file" name="dicom-file" multiple /><br> 
+        <button id="visualize-btn">Visualiseer DICOM</button>
         <label for="nifti-file">NIFTI:</label>
-        <input type="file" id="nifti-file" name="nifti-file"><br><br>   
-        <button type="button" id="run-algo">Run Algorithm</button>
+        <input type="file" id="nifti-file" name="nifti-file"><br>
+        <button id="visualize-nifti-btn">Visualiseer NIFTI</button><br><br><br>
+        <button type="button" id="run-algo1">Run Segmentation Algorithm</button><br> 
+        <button type="button" id="run-algo2">Run Landmark Algorithm</button><br>
+        <button type="button" id="run-algo3">Run Cephalometric Algorithm</button><br>
+        <button type="button" id="run-algo4">Run LeFort Algorithm</button><br>
+
     </form>     
 {% endblock %}
 
@@ -25,6 +31,4 @@
         </ul>
     </div>
 {% endblock %}
-
-
 

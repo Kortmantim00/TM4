@@ -17,16 +17,6 @@ html, body {
     box-sizing: border-box;
 }
 
-/* .container {
-    display: grid;
-    grid-template-columns: 1.5fr 1fr 1.5fr;
-    grid-template-rows: auto;
-    height: 80vh;
-    gap: 1rem;
-    padding: 2rem;
-    box-sizing: border-box;
-} */
-
 .topbar {
     width: 100%;
     background-color: #004080;
@@ -71,9 +61,11 @@ form input[type="file"] {
     margin-top: 0.5rem;
 }
 
-button#run-algo {
+button#run-algo1,
+button#run-algo2,
+button#run-algo3,
+button#run-algo4 {
     margin-top: 1.5rem;
-    background-color: #007bff;
     color: white;
     border: none;
     padding: 0.5rem 1.2rem;
@@ -81,11 +73,17 @@ button#run-algo {
     border-radius: 4px;
     cursor: pointer;
     transition: background-color 0.3s ease;
+    width: 250px;  /* vaste breedte */
+    height: 50px;  /* vaste hoogte */
+    text-align: left;
 }
 
-button#run-algo:hover {
-    background-color: #0056b3;
-}
+/* Verschillende blauwe tinten */
+button#run-algo1 { background-color: #57a5f8; } /* helder blauw */
+button#run-algo2 { background-color: #1679db; } /* donkerder blauw */
+button#run-algo3 { background-color: #0056b3; } /* lichtblauw */
+button#run-algo4 { background-color: #003d80; } /* diep donkerblauw */ 
+
 
 #log-container {
     max-height: 800px;
