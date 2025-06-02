@@ -5,24 +5,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}interface{% endblock %}</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 
   <!-- scr[ts fpr VTL.js or Three.js can be added here -->
 
 </head>
 <body>
+    <header class = "topbar">
+        <h1>Testinterface</h1>
+    </header>
+        
    <div class="container">
         <aside class="sidebar-left">
-            {% block results %}{% endblock %}
+            {% block sidebar %}{% endblock %}
         </aside>
         <main class="viewer">
             {% block viewer %}{% endblock %}    
         </main>
         <aside class="sidebar-right">
-            {% block sidebar %}{% endblock %}   
+            {% block results %}{% endblock %}   
         </aside>
     </div>  
-    <script src="{% static 'js/interface.js' %}"></script>
-<body>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js"></script>
+    <script src="{% static 'js/main.js' %}"></script>
+</body>
 </html>
 <!-- This is a base template for the interface, which can be extended by other templates. -->       

@@ -1,27 +1,112 @@
 html, body {
-    margin: 0; padding: 0; height: 100%;
-    font-family: sens-serif;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f4f4;
+    color: #333;
 }
+
 .container {
     display: grid;
-    grid-template-columns: 1fr 2fr 1fr;
-    height: 100vh;
-}
-.sidebar-left, .sidebare-right {
-    background-color: #888;
+    grid-template-columns: 2fr 2fr 2fr; /* vergrote sidebars */
+    gap: 1.5rem;
     padding: 1rem;
+    max-width: 1600px;
+    margin: 1rem auto;
+    box-sizing: border-box;
+}
+
+/* .container {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1.5fr;
+    grid-template-rows: auto;
+    height: 80vh;
+    gap: 1rem;
+    padding: 2rem;
+    box-sizing: border-box;
+} */
+
+.topbar {
+    width: 100%;
+    background-color: #004080;
+    color: white;
+    padding: 1rem 2rem;
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.topbar + .container {
+    margin-top: 1rem;
+}
+
+.sidebar-left, .sidebar-right {
+    background-color: #ffffff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
     overflow-y: auto;
 }
+
 .viewer {
-    background: #fff;
+    background-color: #fff;
+    border-radius: 8px;
     position: relative;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
-/* placeholder styling */
-.viewer::before {
-    content: "3D-viewer placeholder";
-    color: #888;
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 1.2rem
+
+form label {
+    font-weight: bold;
+    display: block;
+    margin-top: 1rem;
+}
+
+form input[type="file"] {
+    display: block;
+    margin-top: 0.5rem;
+}
+
+button#run-algo {
+    margin-top: 1.5rem;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 0.5rem 1.2rem;
+    font-size: 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button#run-algo:hover {
+    background-color: #0056b3;
+}
+
+#log-container {
+    max-height: 800px;
+    overflow-y: auto;
+    background-color: #f9f9f9;
+    padding: 1rem;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+}
+
+#log-list {
+    list-style-type: none;
+    padding-left: 0;
+    margin: 0;
+}
+
+#log-list li {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    background-color: #fff;
+    border-left: 4px solid #007bff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
