@@ -6,7 +6,7 @@
     <h2>Controls</h2>
     <form id="upload-form" enctype="multipart/form-data">
         <label for="dicom-files">DICOM:</label>
-        <input type="file" id="dicom-file" name="dicom-file" multiple /><br> 
+        <input type="file" id="dicom-files" name="dicom-files" multiple /><br> 
         <button id="visualize-btn">Visualiseer DICOM</button>
         <label for="nifti-file">NIFTI:</label>
         <input type="file" id="nifti-file" name="nifti-file"><br>
@@ -20,15 +20,27 @@
 {% endblock %}
 
 {% block viewer %}
-    <canvas id="viewer" width="800" height="600"></canvas>
+<div class="viewer-grid">
+  <div class="viewer-cell" id="viewer-3d"><div class="viewer-label">3D</div></div>
+  <div class="viewer-cell" id="viewer-axial"><div class="viewer-label">Axial</div></div>
+  <div class="viewer-cell" id="viewer-coronal"><div class="viewer-label">Coronal</div></div>
+  <div class="viewer-cell" id="viewer-sagittal"><div class="viewer-label">Sagittal</div></div>
+</div>
 {% endblock %}
 
 {% block results %}
-    <h2>Results</h2>
+ <h2>Results </h2>
+    <div id="result-container">
+        <ul id="log-list">
+            <li>No results.</li>
+        </ul>
+    </div><br><br><br><br><br><br><br><br><br>
+    <h2>Log </h2>
     <div id="log-container">
         <ul id="log-list">
             <li>Logboek is leeg.</li>
         </ul>
     </div>
+   
 {% endblock %}
 
