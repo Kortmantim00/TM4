@@ -4,33 +4,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}interface{% endblock %}</title>
+    <title>{% block title %}Interface{% endblock %}</title>
+    
     <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
-     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 
-  <!-- scr[ts fpr VTL.js or Three.js can be added here -->
+    <!-- Externe JS-bibliotheken voor 3D en medische weergave -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js" defer></script>
+    <script src="https://unpkg.com/vtk.js"></script>
 
+    <!-- Eigen JavaScript (zorg dat dit werkt met modules of bundlers indien nodig) -->
+    <script src="{% static 'js/main.js' %}"></script>
 </head>
+
 <body>
     <header class = "topbar">
         <h1>Testinterface</h1>
     </header>
         
-   <div class="container">
-        <aside class="sidebar-left">
-            {% block sidebar %}{% endblock %}
-        </aside>
-        <main class="viewer">
-            {% block viewer %}{% endblock %}    
-        </main>
-        <aside class="sidebar-right">
-            {% block results %}{% endblock %}   
-        </aside>
-    </div>  
+<div class="layout-wrapper">
+  <aside class="sidebar-left">
+    {% block sidebar %}{% endblock %}
+  </aside>
+  <main class="viewer">
+    {% block viewer %}{% endblock %}
+  </main>
+  <aside class="sidebar-right">
+    {% block results %}{% endblock %}
+  </aside>
+</div> 
+
     <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js"></script>
     <script src="https://unpkg.com/vtk.js"></script>
     <script src="{% static 'js/main.js' %}"></script>
 </body>
 </html>
-<!-- This is a base template for the interface, which can be extended by other templates. -->       

@@ -1,4 +1,4 @@
-// Logfunctie met template string fix
+// Logfunctie
 function addLog(message) {
   const logList = document.getElementById('log-list');
   if (!logList) return;
@@ -9,227 +9,130 @@ function addLog(message) {
   logList.scrollTop = logList.scrollHeight;
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  const canvas = document.getElementById('viewer');
-  const renderer = new THREE.WebGLRenderer({ canvas });
-  renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+// DICOM upload handler
+document.getElementById('visualize-btn').addEventListener('click', function (e) {
+  e.preventDefault();
 
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xffffff);
-
-  const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
-  camera.position.set(5, 5, 5);
-  camera.lookAt(0, 0, 0);
-
-  // Licht
-  const light = new THREE.DirectionalLight(0xffffff, 1);
-  light.position.set(5, 5, 5);
-  scene.add(light);
-
-  // Grid helper
-  const gridHelper = new THREE.GridHelper(10, 10);
-  scene.add(gridHelper);
-
-  // Assenhelper
-  const axesHelper = new THREE.AxesHelper(5);
-  scene.add(axesHelper);
-
-  // Kubus
-  const geometry = new THREE.BoxGeometry();
-  const material = new THREE.MeshPhongMaterial({ color: 0x156289 });
-  const cube = new THREE.Mesh(geometry, material);
-  cube.scale.set(2, 2, 2);
-  scene.add(cube);
-
-  // Animatie loop
-  function animate() {
-    requestAnimationFrame(animate);
-    cube.rotation.x += 0.01;
-    cube.rotation.y += 0.01;
-    renderer.render(scene, camera);
+  const files = document.getElementById('dicom-files').files;
+  const formData = new FormData();
+  for (let i = 0; i < files.length; i++) {
+    formData.append('dicom_files', files[i]);
   }
-  animate();
+
+  fetch('/upload-dicom/', {
+    method: 'POST',
+    body: formData,
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) {
+        addLog('Fout bij uploaden: ' + data.error);
+      } else {
+        addLog('DICOM succesvol verwerkt.');
+        console.log(data.voxels);
+        // TODO: gebruik echte data in plaats van dummy
+      }
+    })
+    .catch(err => {
+      addLog('Netwerkfout bij uploaden.');
+      console.error(err);
+    });
 });
 
-// // Three.js setup en globale variabelen
-// let scene, camera, renderer;
+// Viewer setup
+function createViewer(containerId, interactorStyle = '2D') {
+  const container = document.getElementById(containerId);
 
-// function initThreeJS() {
-//   const canvas = document.getElementById('viewer');
-//   renderer = new THREE.WebGLRenderer({ canvas });
-//   renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+  const renderWindow = vtk.Rendering.Core.vtkRenderWindow.newInstance();
+  const renderer = vtk.Rendering.Core.vtkRenderer.newInstance();
+  renderWindow.addRenderer(renderer);
 
-//   scene = new THREE.Scene();
-//   scene.background = new THREE.Color(0xffffff);
+  const openGLRenderWindow = vtk.Rendering.OpenGL.vtkRenderWindow.newInstance();
+  openGLRenderWindow.setContainer(container);
+  renderWindow.addView(openGLRenderWindow);
+  openGLRenderWindow.setSize(container.clientWidth, container.clientHeight);
 
-//   camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
-//   camera.position.set(5, 5, 5);
-//   camera.lookAt(0, 0, 0);
+  const interactor = vtk.Rendering.Core.vtkRenderWindowInteractor.newInstance();
+  interactor.setView(openGLRenderWindow);
+  interactor.initialize();
+  interactor.bindEvents(container);
 
-//   const light = new THREE.DirectionalLight(0xffffff, 1);
-//   light.position.set(5, 5, 5);
-//   scene.add(light);
+  if (interactorStyle === '2D') {
+    interactor.setInteractorStyle(vtk.Interaction.Style.vtkInteractorStyleImage.newInstance());
+  } else {
+    interactor.setInteractorStyle(vtk.Interaction.Style.vtkInteractorStyleTrackballCamera.newInstance());
+  }
 
-//   const gridHelper = new THREE.GridHelper(10, 10);
-//   scene.add(gridHelper);
+  return { renderer, renderWindow };
+}
 
-//   const axesHelper = new THREE.AxesHelper(5);
-//   scene.add(axesHelper);
+// Dummy volume
+function createDummyVolumeData() {
+  const imageData = vtk.Common.DataModel.vtkImageData.newInstance();
+  const dims = [100, 100, 100];
+  imageData.setDimensions(dims);
+  const scalars = new Uint8Array(dims[0] * dims[1] * dims[2]);
+  for (let i = 0; i < scalars.length; i++) {
+    scalars[i] = Math.random() * 255;
+  }
+  const dataArray = vtk.Common.Core.vtkDataArray.newInstance({
+    name: 'Scalars',
+    values: scalars,
+  });
+  imageData.getPointData().setScalars(dataArray);
+  return imageData;
+}
 
-//   animate();
-// }
+// Volledig viewer-init
+document.addEventListener('DOMContentLoaded', () => {
+  const imageData = createDummyVolumeData();
 
-// function animate() {
-//   requestAnimationFrame(animate);
-//   renderer.render(scene, camera);
-// }
+  // 3D
+  const { renderer: r3D, renderWindow: rw3D } = createViewer('viewer-3d', '3D');
+  const volumeMapper = vtk.Rendering.Core.vtkVolumeMapper.newInstance();
+  volumeMapper.setInputData(imageData);
+  const volume = vtk.Rendering.Core.vtkVolume.newInstance();
+  volume.setMapper(volumeMapper);
+  r3D.addVolume(volume);
+  r3D.resetCamera();
+  rw3D.render();
 
-// // Visualiseer voxels als cubes, voorbeeld: voxel > drempel waarde
-// function visualizeVolume(voxels) {
-//   // Eerst oude voxel cubes verwijderen
-//   for (let i = scene.children.length - 1; i >= 0; i--) {
-//     const obj = scene.children[i];
-//     if (obj.userData.isVoxelCube) {
-//       scene.remove(obj);
-//       obj.geometry.dispose();
-//       obj.material.dispose();
-//     }
-//   }
+  // Axial
+  const { renderer: rAxial, renderWindow: rwAxial } = createViewer('viewer-axial', '2D');
+  const mAxial = vtk.Rendering.Core.vtkImageMapper.newInstance();
+  mAxial.setInputData(imageData);
+  mAxial.setSliceAtFocalPoint(true);
+  mAxial.setSlicingMode(vtk.Rendering.Core.vtkImageMapper.SlicingMode.K);
+  mAxial.setSlice(50);
+  const sAxial = vtk.Rendering.Core.vtkImageSlice.newInstance();
+  sAxial.setMapper(mAxial);
+  rAxial.addViewProp(sAxial);
+  rAxial.resetCamera();
+  rwAxial.render();
 
-//   const geometry = new THREE.BoxGeometry(1, 1, 1);
-//   const material = new THREE.MeshBasicMaterial({ color: 0x44aa88 });
+  // Coronal
+  const { renderer: rCoronal, renderWindow: rwCoronal } = createViewer('viewer-coronal', '2D');
+  const mCoronal = vtk.Rendering.Core.vtkImageMapper.newInstance();
+  mCoronal.setInputData(imageData);
+  mCoronal.setSliceAtFocalPoint(true);
+  mCoronal.setSlicingMode(vtk.Rendering.Core.vtkImageMapper.SlicingMode.J);
+  mCoronal.setSlice(50);
+  const sCoronal = vtk.Rendering.Core.vtkImageSlice.newInstance();
+  sCoronal.setMapper(mCoronal);
+  rCoronal.addViewProp(sCoronal);
+  rCoronal.resetCamera();
+  rwCoronal.render();
 
-//   for (let z = 0; z < voxels.length; z++) {
-//     for (let y = 0; y < voxels[z].length; y++) {
-//       for (let x = 0; x < voxels[z][y].length; x++) {
-//         if (voxels[z][y][x] > 30) {  // drempelwaarde, pas aan naar jouw data
-//           const cube = new THREE.Mesh(geometry, material);
-//           cube.position.set(x, y, z);
-//           cube.userData.isVoxelCube = true;
-//           scene.add(cube);
-//         }
-//       }
-//     }
-//   }
-//   addLog(`Visualisatie: ${voxels.length} slices geladen.`);
-// }
-
-// document.addEventListener('DOMContentLoaded', () => {
-//   initThreeJS();
-
-//   const uploadForm = document.getElementById('dicom-upload-form');
-//   uploadForm.addEventListener('submit', async (e) => {
-//     e.preventDefault();
-
-//     const files = document.getElementById('dicom_files').files;
-//     if (files.length === 0) {
-//       alert('Selecteer eerst één of meerdere DICOM-bestanden.');
-//       return;
-//     }
-
-//     const formData = new FormData();
-//     for (const file of files) {
-//       formData.append('dicom_files', file);
-//     }
-
-//     try {
-//         addLog("Upload gestart...");
-
-//         const response = await fetch('/upload-dicom/', {
-//             method: 'POST',
-//             body: formData,
-//         });
-
-//         if (!response.ok) throw new Error('Upload mislukt');
-
-//         const data = await response.json();
-//         addLog(data.message || "DICOM succesvol geüpload en verwerkt.");
-//         visualizeVolume(data.voxels);
-//         } catch (error) {
-//         addLog("Fout bij upload of verwerking: " + error.message);
-//     }
-//   });
-// });
-
-// function visualizeVolume(volumeData) {
-//     // volumeData is 3D array: [z][y][x]
-
-//     const container = document.getElementById('vtk-viewer');
-//     container.innerHTML = ''; // Clear oude rendering
-
-//     // Maak VTK.js renderer, renderWindow, interactor
-//     const vtkFullScreenRenderWindow = vtk.Rendering.Misc.vtkFullScreenRenderWindow;
-//     const fullScreenRenderer = vtkFullScreenRenderWindow.newInstance({ rootContainer: container, containerStyle: { height: '600px', width: '800px' } });
-//     const renderer = fullScreenRenderer.getRenderer();
-//     const renderWindow = fullScreenRenderer.getRenderWindow();
-
-//     // Zet camera
-//     const camera = renderer.getActiveCamera();
-//     camera.setPosition(0, 0, 500);
-//     camera.setFocalPoint(0, 0, 0);
-//     camera.setViewUp(0, -1, 0);
-
-//     // Maak vtkImageData van volumeData
-//     const vtkImageData = vtk.Common.DataModel.vtkImageData.newInstance();
-
-//     // Zet dimensies (x,y,z)
-//     const dims = [volumeData[0][0].length, volumeData[0].length, volumeData.length];  // width, height, depth
-
-//     vtkImageData.setDimensions(dims);
-
-//     // Flatten de 3D array naar 1D array
-//     const scalars = new Uint8Array(dims[0] * dims[1] * dims[2]);
-
-//     let idx = 0;
-//     for (let z = 0; z < dims[2]; z++) {
-//         for (let y = 0; y < dims[1]; y++) {
-//             for (let x = 0; x < dims[0]; x++) {
-//                 let val = volumeData[z][y][x];
-//                 scalars[idx++] = val; // Pas eventueel schaal of threshold aan
-//             }
-//         }
-//     }
-
-//     vtkImageData.getPointData().setScalars(vtk.Common.Core.vtkDataArray.newInstance({
-//         numberOfComponents: 1,
-//         values: scalars,
-//         dataType: 'Uint8Array',
-//         name: 'Scalars'
-//     }));
-
-//     // Maak volume mapper
-//     const volumeMapper = vtk.Rendering.Core.vtkVolumeMapper.newInstance();
-//     volumeMapper.setSampleDistance(0.7);
-//     volumeMapper.setInputData(vtkImageData);
-
-//     // Volume property (transfer functions)
-//     const volumeProperty = vtk.Rendering.Core.vtkVolumeProperty.newInstance();
-
-//     // Opaciteit en kleur (transfer functions)
-//     const ctfun = vtk.Rendering.Core.vtkColorTransferFunction.newInstance();
-//     ctfun.addRGBPoint(0, 0, 0, 0);
-//     ctfun.addRGBPoint(255, 1, 1, 1);
-
-//     const ofun = vtk.Rendering.Core.vtkPiecewiseFunction.newInstance();
-//     ofun.addPoint(0, 0);
-//     ofun.addPoint(255, 0.8);
-
-//     volumeProperty.setRGBTransferFunction(0, ctfun);
-//     volumeProperty.setScalarOpacity(0, ofun);
-//     volumeProperty.setInterpolationTypeToLinear();
-
-//     // Maak volume actor
-//     const volume = vtk.Rendering.Core.vtkVolume.newInstance();
-//     volume.setMapper(volumeMapper);
-//     volume.setProperty(volumeProperty);
-
-//     // Voeg volume toe aan scene
-//     renderer.addVolume(volume);
-//     renderer.resetCamera();
-//     renderWindow.render();
-
-//     // Interactor om te kunnen roteren etc.
-//     const interactor = renderWindow.getInteractor();
-//     interactor.initialize();
-//     interactor.bindEvents(container);
-// }
+  // Sagittal
+  const { renderer: rSagittal, renderWindow: rwSagittal } = createViewer('viewer-sagittal', '2D');
+  const mSagittal = vtk.Rendering.Core.vtkImageMapper.newInstance();
+  mSagittal.setInputData(imageData);
+  mSagittal.setSliceAtFocalPoint(true);
+  mSagittal.setSlicingMode(vtk.Rendering.Core.vtkImageMapper.SlicingMode.I);
+  mSagittal.setSlice(50);
+  const sSagittal = vtk.Rendering.Core.vtkImageSlice.newInstance();
+  sSagittal.setMapper(mSagittal);
+  rSagittal.addViewProp(sSagittal);
+  rSagittal.resetCamera();
+  rwSagittal.render();
+});

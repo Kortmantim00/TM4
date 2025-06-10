@@ -41,7 +41,7 @@ def upload_dicom(request):
 
             try:
                 volume = dicom_to_voxel(tmpdirname)
-                return JsonResponse({'voxels': volume})
+                return JsonResponse({'voxels': volume.tolist(), 'shape': volume.shape})
             except Exception as e:
                 return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Invalid request'}, status=400)
