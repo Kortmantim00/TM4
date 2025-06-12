@@ -9,13 +9,6 @@
     <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
-
-    <!-- Externe JS-bibliotheken voor 3D en medische weergave -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js" defer></script>
-    <script src="https://unpkg.com/vtk.js"></script>
-
-    <!-- Eigen JavaScript (zorg dat dit werkt met modules of bundlers indien nodig) -->
-    <script src="{% static 'js/main.js' %}"></script>
 </head>
 
 <body>
@@ -34,7 +27,6 @@
     {% block results %}{% endblock %}
   </aside>
 </div> 
-
     <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js"></script>
     <script src="https://unpkg.com/vtk.js"></script>
     <script src="{% static 'js/main.js' %}"></script>
