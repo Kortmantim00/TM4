@@ -1,47 +1,77 @@
 from django.shortcuts import render
-
-# Create your views here.
-
-import os
-import pydicom
-import numpy as np
-import json
-from django.shortcuts import render
 from django.conf import settings
-from django.core.files.storage import default_storage
-import os
-
-from .utils.dicom_utils import dicom_to_voxel, save_volume_as_json
-from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
-import tempfile
+from django.views.decorators.csrf import csrf_exempt
+import os
+import shutil
+from .utils.dicom_utils import dicom_to_voxel, save_volume_as_json
+from .utils.nifti_utils import convert_nifti_to_json
+
 
 def home(request):
-    if request.method == 'POST' and request.FILES.get('dicom_file'):
-        uploaded_file = request.FILES['dicom_file']
-        dicom_path = default_storage.save('dicoms/' + uploaded_file.name, uploaded_file)
-        full_dicom_path = os.path.join(settings.MEDIA_ROOT, dicom_path)
+    log_messages = []  # Frontend-log verzameling
 
-        # Als het om meerdere bestanden gaat: pas hier aan
-        voxel = dicom_to_voxel(os.path.dirname(full_dicom_path))
-        json_path = os.path.join(settings.MEDIA_ROOT, 'volume.json')
-        save_volume_as_json(voxel, json_path)
-
-    return render(request, 'interface/home.html')
-
-def upload_dicom(request):
     if request.method == 'POST':
-        files = request.FILES.getlist('dicom_files')
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            for file in files:
-                filepath = os.path.join(tmpdirname, file.name)
-                with open(filepath, 'wb+') as dest:
-                    for chunk in file.chunks():
+        # === DICOM verwerking ===
+        if request.FILES.getlist('dicom_file'):
+            files = request.FILES.getlist('dicom_file')
+            upload_dir = os.path.join(settings.MEDIA_ROOT, 'dicoms')
+            os.makedirs(upload_dir, exist_ok=True)
+
+            for f in files:
+                file_path = os.path.join(upload_dir, f.name)
+                with open(file_path, 'wb+') as dest:
+                    for chunk in f.chunks():
                         dest.write(chunk)
+            log_messages.append("DICOM bestanden succesvol geüpload.")
 
             try:
-                volume = dicom_to_voxel(tmpdirname)
-                return JsonResponse({'voxels': volume.tolist(), 'shape': volume.shape})
+                voxel, spacing = dicom_to_voxel(upload_dir)
+                json_path = os.path.join(settings.MEDIA_ROOT, 'volume.json')
+                save_volume_as_json(voxel, json_path, spacing)
+                log_messages.append("DICOM volume geconverteerd en opgeslagen.")
             except Exception as e:
-                return JsonResponse({'error': str(e)}, status=500)
-    return JsonResponse({'error': 'Invalid request'}, status=400)
+                log_messages.append(f"Fout bij DICOM verwerking: {str(e)}")
+
+        # === NIFTI verwerking ===
+        elif 'nifti_file' in request.FILES:
+            nifti_file = request.FILES['nifti_file']
+            upload_dir = os.path.join(settings.MEDIA_ROOT, 'niftis')
+            os.makedirs(upload_dir, exist_ok=True)
+            file_path = os.path.join(upload_dir, nifti_file.name)
+
+            with open(file_path, 'wb+') as dest:
+                for chunk in nifti_file.chunks():
+                    dest.write(chunk)
+            log_messages.append("NIfTI bestand succesvol geüpload.")
+
+            try:
+                json_path = os.path.join(settings.MEDIA_ROOT, 'volume_nifti.json')
+                convert_nifti_to_json(file_path, output_path=json_path)
+                log_messages.append("NIfTI volume geconverteerd en opgeslagen.")
+            except Exception as e:
+                log_messages.append(f"Fout bij NIfTI verwerking: {str(e)}")
+
+    return render(request, 'interface/home.html', {
+        'log_messages': log_messages
+    })
+
+@csrf_exempt
+def reset_viewer(request):
+    if request.method == 'POST':
+        media_path = os.path.join(settings.MEDIA_ROOT)
+        try:
+            for filename in os.listdir(media_path):
+                file_path = os.path.join(media_path, filename)
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            return JsonResponse({'status': 'ok', 'log': 'Media-map succesvol geleegd.'})
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e),
+                'log': 'Fout bij het leegmaken van de media-map.'
+            })
+    return JsonResponse({'status': 'invalid', 'log': 'Ongeldig verzoek.'}, status=405)

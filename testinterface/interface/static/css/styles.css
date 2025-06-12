@@ -101,6 +101,17 @@ form input[type="file"] {
     margin-top: 0.5rem;
 }
 
+button#reset-viewer-btn {
+    color: white;
+    background-color: #dc3545; /* Bootstrap danger color */
+    border: none;
+    padding: 0.3rem 1.2rem;
+    font-size: 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
 button#run-algo1,
 button#run-algo2,
 button#run-algo3,
@@ -151,8 +162,8 @@ button#run-algo4 { background-color: #003d80; } /* diep donkerblauw */
 }
 
 #result-container {
-    min-height: 100px;
-    max-height: 300px;
+    min-height: 150px;
+    max-height: 350px;
     overflow-y: auto;
     background-color: #f9f9f9;
     padding: 1rem;

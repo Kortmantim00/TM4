@@ -1,47 +1,27 @@
-// Logfunctie
+// 🛡️ CSRF-token ophalen voor veilige POST-verzoeken
+function getCSRFToken() {
+  return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+// 🧾 Logregel toevoegen met timestamp
 function addLog(message) {
   const logList = document.getElementById('log-list');
   if (!logList) return;
-  const entry = document.createElement('li');
   const timestamp = new Date().toLocaleTimeString();
+  const entry = document.createElement('li');
   entry.textContent = `[${timestamp}] ${message}`;
   logList.appendChild(entry);
   logList.scrollTop = logList.scrollHeight;
 }
 
-// DICOM upload handler
-document.getElementById('visualize-btn').addEventListener('click', function (e) {
-  e.preventDefault();
+//
+// 🔲 Viewer Setup en Rendering
+//
 
-  const files = document.getElementById('dicom-files').files;
-  const formData = new FormData();
-  for (let i = 0; i < files.length; i++) {
-    formData.append('dicom_files', files[i]);
-  }
-
-  fetch('/upload-dicom/', {
-    method: 'POST',
-    body: formData,
-  })
-    .then(response => response.json())
-    .then(data => {
-      if (data.error) {
-        addLog('Fout bij uploaden: ' + data.error);
-      } else {
-        addLog('DICOM succesvol verwerkt.');
-        console.log(data.voxels);
-        // TODO: gebruik echte data in plaats van dummy
-      }
-    })
-    .catch(err => {
-      addLog('Netwerkfout bij uploaden.');
-      console.error(err);
-    });
-});
-
-// Viewer setup
+// Viewer aanmaken voor 2D of 3D interactie
 function createViewer(containerId, interactorStyle = '2D') {
   const container = document.getElementById(containerId);
+  container.innerHTML = ''; // 🔄 Maak container leeg
 
   const renderWindow = vtk.Rendering.Core.vtkRenderWindow.newInstance();
   const renderer = vtk.Rendering.Core.vtkRenderer.newInstance();
@@ -62,77 +42,240 @@ function createViewer(containerId, interactorStyle = '2D') {
   } else {
     interactor.setInteractorStyle(vtk.Interaction.Style.vtkInteractorStyleTrackballCamera.newInstance());
   }
-
   return { renderer, renderWindow };
 }
 
-// Dummy volume
-function createDummyVolumeData() {
+// 2D/3D weergaves laden met volumeData
+function loadVolumeToViewers(volumeData) {
   const imageData = vtk.Common.DataModel.vtkImageData.newInstance();
-  const dims = [100, 100, 100];
-  imageData.setDimensions(dims);
-  const scalars = new Uint8Array(dims[0] * dims[1] * dims[2]);
-  for (let i = 0; i < scalars.length; i++) {
-    scalars[i] = Math.random() * 255;
+  imageData.setDimensions(volumeData.dimensions);
+
+  if (volumeData.spacing) {
+    imageData.setSpacing(...volumeData.spacing);
+  } else {
+    imageData.setSpacing(1, 1, 1);
   }
+
   const dataArray = vtk.Common.Core.vtkDataArray.newInstance({
     name: 'Scalars',
-    values: scalars,
+    values: new Uint8Array(volumeData.data),
   });
   imageData.getPointData().setScalars(dataArray);
-  return imageData;
+
+  //Mapping van slicing modes
+  const slicingModeMap = {
+    I: vtk.Rendering.Core.vtkImageMapper.SlicingMode.X,
+    J: vtk.Rendering.Core.vtkImageMapper.SlicingMode.Y,
+    K: vtk.Rendering.Core.vtkImageMapper.SlicingMode.Z
+  };
+
+  const views = [
+    { id: 'viewer-3d', style: '3D', mapper: 'volume' },
+    { id: 'viewer-axial', mode: 'K' },
+    { id: 'viewer-coronal', mode: 'J' },
+    { id: 'viewer-sagittal', mode: 'I' }
+  ];
+
+  views.forEach(view => {
+    const { renderer, renderWindow } = createViewer(view.id, view.style || '2D');
+
+    if (view.mapper === 'volume') {
+      const volumeMapper = vtk.Rendering.Core.vtkVolumeMapper.newInstance();
+      volumeMapper.setInputData(imageData);
+      const volume = vtk.Rendering.Core.vtkVolume.newInstance();
+      volume.setMapper(volumeMapper);
+      renderer.addVolume(volume);
+    } else {
+      const mapper = vtk.Rendering.Core.vtkImageMapper.newInstance();
+      mapper.setInputData(imageData);
+
+      const slicingMode = slicingModeMap[view.mode];
+      mapper.setSlicingMode(slicingMode);
+
+      const sliceIndex = Math.floor(volumeData.dimensions['IJK'.indexOf(view.mode)] / 2);
+      mapper.setSliceAtFocalPoint(true);
+      mapper.setSlice(sliceIndex);
+
+      const slice = vtk.Rendering.Core.vtkImageSlice.newInstance();
+      slice.setMapper(mapper);
+      renderer.addViewProp(slice);
+    }
+
+    renderer.resetCamera();
+    renderWindow.render();
+  });
 }
 
-// Volledig viewer-init
-document.addEventListener('DOMContentLoaded', () => {
-  const imageData = createDummyVolumeData();
+//
+// 📦 Volume ophalen en visualiseren
+//
 
-  // 3D
-  const { renderer: r3D, renderWindow: rw3D } = createViewer('viewer-3d', '3D');
-  const volumeMapper = vtk.Rendering.Core.vtkVolumeMapper.newInstance();
-  volumeMapper.setInputData(imageData);
-  const volume = vtk.Rendering.Core.vtkVolume.newInstance();
-  volume.setMapper(volumeMapper);
-  r3D.addVolume(volume);
-  r3D.resetCamera();
-  rw3D.render();
+// DICOM volume ophalen en renderen vanuit JSON
+function fetchAndVisualizeVolume() {
+  addLog('Start visualisatie van DICOM volume...');
 
-  // Axial
-  const { renderer: rAxial, renderWindow: rwAxial } = createViewer('viewer-axial', '2D');
-  const mAxial = vtk.Rendering.Core.vtkImageMapper.newInstance();
-  mAxial.setInputData(imageData);
-  mAxial.setSliceAtFocalPoint(true);
-  mAxial.setSlicingMode(vtk.Rendering.Core.vtkImageMapper.SlicingMode.K);
-  mAxial.setSlice(50);
-  const sAxial = vtk.Rendering.Core.vtkImageSlice.newInstance();
-  sAxial.setMapper(mAxial);
-  rAxial.addViewProp(sAxial);
-  rAxial.resetCamera();
-  rwAxial.render();
+  fetch('/media/volume.json?t=' + new Date().getTime())
+    .then(response => {
+      if (!response.ok) throw new Error("Bestand bestaat niet of is verwijderd.");
+      return response.json();
+    })
+    .then(data => {
+      const voxels = data.voxels;
+      const spacing = data.spacing || [1.0, 1.0, 1.0];
+      const dims = [voxels[0][0].length, voxels[0].length, voxels.length]; // [x, y, z]
+      const flatData = voxels.flat(2); // 3D -> 1D array
 
-  // Coronal
-  const { renderer: rCoronal, renderWindow: rwCoronal } = createViewer('viewer-coronal', '2D');
-  const mCoronal = vtk.Rendering.Core.vtkImageMapper.newInstance();
-  mCoronal.setInputData(imageData);
-  mCoronal.setSliceAtFocalPoint(true);
-  mCoronal.setSlicingMode(vtk.Rendering.Core.vtkImageMapper.SlicingMode.J);
-  mCoronal.setSlice(50);
-  const sCoronal = vtk.Rendering.Core.vtkImageSlice.newInstance();
-  sCoronal.setMapper(mCoronal);
-  rCoronal.addViewProp(sCoronal);
-  rCoronal.resetCamera();
-  rwCoronal.render();
+      loadVolumeToViewers({ data: flatData, dimensions: dims, spacing: spacing });
+      addLog('DICOM volume geladen en gevisualiseerd.');
+    })
+    .catch(error => {
+      console.error('Fout bij laden DICOM volume:', error);
+      addLog('Geen DICOM volume gevonden. Mogelijk gereset.');
+    });
+}
 
-  // Sagittal
-  const { renderer: rSagittal, renderWindow: rwSagittal } = createViewer('viewer-sagittal', '2D');
-  const mSagittal = vtk.Rendering.Core.vtkImageMapper.newInstance();
-  mSagittal.setInputData(imageData);
-  mSagittal.setSliceAtFocalPoint(true);
-  mSagittal.setSlicingMode(vtk.Rendering.Core.vtkImageMapper.SlicingMode.I);
-  mSagittal.setSlice(50);
-  const sSagittal = vtk.Rendering.Core.vtkImageSlice.newInstance();
-  sSagittal.setMapper(mSagittal);
-  rSagittal.addViewProp(sSagittal);
-  rSagittal.resetCamera();
-  rwSagittal.render();
+// NIFTI volume ophalen en renderen
+function fetchAndVisualizeNifti() {
+  addLog('Start visualisatie van NIFTI volume...');
+
+  fetch('/media/volume_nifti.json?t=' + new Date().getTime())  // pas pad aan naar waar jouw server NIFTI json bewaart
+    .then(response => {
+      if (!response.ok) throw new Error("NIFTI volume niet gevonden");
+      return response.json();
+    })
+    .then(data => {
+      const voxels = data.voxels;
+      const spacing = data.spacing || [1.0, 1.0, 1.0];
+      const dims = [voxels[0][0].length, voxels[0].length, voxels.length]; // [x, y, z]
+
+      // Flatten 3D array in juiste volgorde
+      const flatData = new Float32Array(dims[0] * dims[1] * dims[2]);
+      let idx = 0;
+      for (let z = 0; z < dims[2]; z++) {
+        for (let y = 0; y < dims[1]; y++) {
+          for (let x = 0; x < dims[0]; x++) {
+            flatData[idx++] = voxels[z][y][x];
+          }
+        }
+      }
+
+      const imageData = vtk.Common.DataModel.vtkImageData.newInstance();
+      imageData.setDimensions(...dims);
+      imageData.setSpacing(...spacing);
+      imageData.getPointData().setScalars(
+        vtk.Common.Core.vtkDataArray.newInstance({
+          numberOfComponents: 1,
+          values: flatData,
+          dataType: 'Float32Array',
+        })
+      );
+
+      // 3D viewer setup 
+      const container = document.getElementById('viewer-3d');
+      container.innerHTML = '';
+
+      const fullScreenRenderer = vtk.Rendering.Misc.vtkFullScreenRenderWindow.newInstance({
+        rootContainer: container,
+        background: [0, 0, 0],
+      });
+
+      const renderer = fullScreenRenderer.getRenderer();
+      const renderWindow = fullScreenRenderer.getRenderWindow();
+
+      const volumeMapper = vtk.Rendering.Core.vtkVolumeMapper.newInstance();
+      volumeMapper.setInputData(imageData);
+      const volume = vtk.Rendering.Core.vtkVolume.newInstance();
+      volume.setMapper(volumeMapper);
+
+      renderer.addVolume(volume);
+      renderer.resetCamera();
+      renderWindow.render();
+
+      addLog('NIFTI volume geladen en gevisualiseerd.');
+    })
+    .catch(error => {
+      console.error('Fout bij laden NIFTI:', error);
+      addLog('Fout bij visualiseren NIFTI volume.');
+    });
+}
+
+
+//
+// 🧩 Gebruikersinteractie
+//
+
+// Uploadform verwerken DICOM-bestanden
+document.getElementById('dicom-upload-form').addEventListener('submit', function (e) {
+  e.preventDefault();
+
+  const formData = new FormData(this);
+  addLog('DICOM Bestanden worden geüpload...');
+  fetch('/', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': getCSRFToken() },
+    body: formData,
+  })
+    .then(response => {
+      if (response.ok) {
+        addLog('DICMO Bestanden succesvol geüpload.');
+        fetchAndVisualizeVolume();
+      }
+    })
+    .catch(error => {
+      console.error('Upload fout:', error);
+      addLog('Upload DICOM mislukt.');
+    });
+});
+
+// Uploadform verwerken NIFTI-bestanden
+document.getElementById('nifti-upload-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+
+  const formData = new FormData(this);
+  addLog('NIFTI bestand wordt geüpload...');
+
+  fetch('/', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': getCSRFToken() },
+    body: formData,
+  })
+  .then(response => {
+    if (response.ok) {
+      addLog('NIFTI bestand succesvol geüpload.');
+      fetchAndVisualizeNifti();
+    } else {
+      addLog('Fout bij upload NIFTI.');
+    }
+  })
+  .catch(error => {
+    console.error('Upload fout:', error);
+    addLog('Upload NIFTI mislukt.');
+  });
+});
+
+// Viewer resetten
+document.getElementById('reset-viewer-btn').addEventListener('click', () => {
+  addLog('Resetten van viewer en media...');
+
+  // Viewers legen
+  ['viewer-3d', 'viewer-axial', 'viewer-coronal', 'viewer-sagittal'].forEach(id => {
+    document.getElementById(id).innerHTML = '';
+  });
+
+  // Server-side media verwijderen
+  fetch('/reset/', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': getCSRFToken() },
+  })
+    .then(response => {
+      if (response.ok) {
+        addLog('Viewer geleegd, media verwijderd.');
+      } else {
+        addLog('Fout bij resetten van media.');
+      }
+    })
+    .catch(error => {
+      console.error('Reset fout:', error);
+      addLog('Fout bij communicatie met server.');
+    });
 });

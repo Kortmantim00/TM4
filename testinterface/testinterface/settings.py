@@ -14,6 +14,7 @@ from pathlib import Path
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -31,6 +32,9 @@ ALLOWED_HOSTS = ['10.150.3.21', 'localhost', '127.0.0.1']
 # Media
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
+
+DATA_UPLOAD_MAX_NUMBER_FILES = 5000  # of hoger als nodig
 
 # Application definition
 
@@ -41,7 +45,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "interface",
+    "interface.apps.InterfaceConfig",
 ]
 
 MIDDLEWARE = [
@@ -127,7 +131,7 @@ STATIC_URL = "/static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 STATICFILES_DIRS = [ 
-    BASE_DIR / "static", 
+    BASE_DIR / "interface" / "static", 
 ]
 TEMPLATES[0]["DIRS"] = [ 
     BASE_DIR / "templates", 
